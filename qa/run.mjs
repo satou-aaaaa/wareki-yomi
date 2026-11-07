@@ -132,6 +132,7 @@ check("README の URL のすぐ後ろに全角の字を続けない（Link check
 { const sw = readFileSync(path.join(root, "sw.js"), "utf8"), mf = JSON.parse(readFileSync(path.join(root, "manifest.webmanifest"), "utf8"));
   const shell = JSON.parse(sw.match(/SHELL = (\[[^\]]+\])/)[1]);
   check("PWA：sw.js は画面のファイルを全部保存し（引き継ぎの transfer.js も）、外へ何も送らない", ["./index.html", "./gen.js", "./transfer.js", "./manifest.webmanifest", "./icon-192.png", "./icon-512.png"].every((f) => shell.includes(f)) && !/https?:\/\//.test(sw.replace(/^\/\/.*$/gm, "")));
+  check("PWA：maskable のアイコンは別の絵（icon-maskable-512.png。絵を中心の半径40％に収める）で、ふつうのアイコンを使い回さない（Android で端が切れる。CodeRabbit 2026-11-07）", mf.icons.filter((x) => /maskable/.test(x.purpose || "")).every((x) => x.src === "icon-maskable-512.png") && existsSync(path.join(root, "icon-maskable-512.png")) && shell.includes("./icon-maskable-512.png"));
   check("PWA：manifest にアイコン2つと名前がある", mf.name === "和暦よみ" && mf.icons.length >= 2 && mf.start_url === "./"); }
 { const st = await checkSwStall(readFileSync(path.join(root, "sw.js"), "utf8"));
   check("PWA：本文の途中で通信が止まっても、4秒で保存したものを返す（ふつうはネットの返事。shared-workflows incidents/2026-11-07-sw-body-stall.md）", st.ok, JSON.stringify(st)); }
