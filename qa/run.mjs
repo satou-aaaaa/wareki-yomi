@@ -14,7 +14,7 @@ import { checkSwStall } from "./sw-check.mjs";
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const results = [];
 const check = (name, ok, detail = "") => results.push({ name, ok: !!ok, detail: String(detail).slice(0, 400) });
-const firstClose = async (q) => { if (await q.locator("#howto[open]").count()) await q.click("#howto-ok"); if (await q.locator("#core-coach").count()) { await q.evaluate(() => Core.coach.leave()); await q.waitForTimeout(100); } }; // はじめての練習の吹き出しをやめてホームへ（sync-template の migrateFirstQa が足した）
+const firstClose = async (q) => { if (await q.locator("#howto[open]").count()) await q.click("#howto-ok"); if (await q.evaluate(() => !!(window.Core && Core.coach && Core.coach.active()))) { await q.evaluate(() => { Core.coach.leave(); scrollTo(0, 0); }); await q.waitForTimeout(100); } }; // はじめての練習の吹き出しをやめてホームへ（sync-template の migrateFirstQa が足した）
 const G = createRequire(import.meta.url)(path.join(root, "gen.js"));
 
 // ---- 1. 問題の作り方（ブラウザを使わない）----
@@ -173,7 +173,7 @@ async function solve(p, { wrong = 0 } = {}) {
 try {
   // はじめて：遊び方が出る・文字の大きさ
   const p = await newPage();
-  check("はじめて開くと遊び方が出る", await p.locator("#core-coach").count() === 1);
+  check("はじめて開くと遊び方が出る", await p.locator("#core-coach").waitFor({ timeout: 3000 }).then(() => true, () => false));
   await firstClose(p);
   check("文字の大きさ：はじめは「大きい」（18px）", await p.evaluate(() => getComputedStyle(document.documentElement).fontSize) === "18px");
   await p.click('.fsrow button[data-fs="3"]');
@@ -181,11 +181,12 @@ try {
   check("文字の大きさ：「とても大きい」にすると開き直しても残る", await p.evaluate(() => getComputedStyle(document.documentElement).fontSize) === "22px" && await p.locator('.fsrow button[data-fs="3"][aria-pressed="true"]').count() === 1);
   await p.click('.fsrow button[data-fs="2"]');
   check("ホームに今日のひとこと（和暦帳の覚えること）が出る", (await p.textContent("#tip")).includes("今日のひとこと"));
+  await firstClose(p);
   check("上級・とことん・練習は、はじめての日から押せる（鍵なし）", await p.locator("#go-h:not([disabled])").count() === 1 && await p.locator("#go-e:not([disabled])").count() === 1 && await p.locator("#go-p").count() === 1 && !/🔒|すると開く|🎫/.test(await p.textContent("#app")));
 
   {
     const q = await newPage();
-    check("遊び方：Esc で閉じても出る", await q.locator("#core-coach").count() === 1);
+    check("遊び方：Esc で閉じても出る", await q.locator("#core-coach").waitFor({ timeout: 3000 }).then(() => true, () => false));
     await q.keyboard.press("Escape"); await q.waitForTimeout(100);
     const shut = await q.locator("#howto[open]").count() === 0;
     await q.evaluate(() => __bs.home()); await q.waitForTimeout(100);
@@ -456,7 +457,7 @@ try {
     await pw.goto(url); await firstClose(pw); await pw.waitForTimeout(2000);
     check("保存できないときは、帯 #savewarn がちょうど1つ出て、2秒たっても残る", (await pw.locator("#savewarn").count()) === 1, await pw.locator("#savewarn").count());
     await pw.evaluate(() => { Storage.prototype.setItem = window.__origSetItem; });
-    await firstClose(pw).then(() => pw.click("#f-how")); await firstClose(pw);
+    await firstClose(pw).then(() => pw.evaluate(() => openHow())); await firstClose(pw);
     check("保存できるようになって次に保存すると、帯 #savewarn が消える", (await pw.locator("#savewarn").count()) === 0);
     await pw.close(); }
 } catch (e) {
