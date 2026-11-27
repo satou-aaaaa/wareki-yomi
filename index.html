@@ -1547,11 +1547,15 @@ function tidy(s) {
 function saveWarn(on) { let b = document.getElementById("savewarn"); const l = document.getElementById("live"), W = "この端末に記録を保存できませんでした。ページを開き直すと、いまの記録が消えます"; if (!on) { if (b) { b.remove(); if (saveWarn.o) saveWarn.o.disconnect(); if (l && l.textContent.includes(W)) l.textContent = l.textContent.replace(W, "").replace(/^[。\s]+|[。\s]+$/g, ""); } return; } if (b) return; b = document.createElement("div"); b.id = "savewarn"; b.setAttribute("role", "status"); b.textContent = W; b.style.cssText = "position:sticky;top:0;z-index:9999;padding:8px 12px;background:#fff3cd;color:#000;font-size:15px;line-height:1.5;text-align:center;pointer-events:none;border-bottom:2px solid #8a6d00"; (document.body || document.documentElement).prepend(b); if (l) { l.textContent = W; if (window.MutationObserver) { saveWarn.o = new MutationObserver(() => { if (document.getElementById("savewarn") && l.textContent && !l.textContent.includes(W)) l.textContent += "。" + W; }); saveWarn.o.observe(l, { childList: true, characterData: true, subtree: true }); } } } // 帯は画面のいちばん上に場所を取り（ボタンに重ならない）、#live でも読み上げる。ほかの知らせで #live が書き換わっても、保存できないあいだは警告を後ろに付け直す。保存できたら帯と #live の警告を消す（黙って記録が消えないように・古い警告を読み上げないように）
 function save(fn) { const s = load(); fn(s); s.t = Math.max(Date.now(), (s.t || 0) + 1); const j = JSON.stringify(s); try { localStorage.setItem(KEY, j); mem = null; saveWarn(false); } catch (e) { mem = j; saveWarn(true); } return s; }
 function streak(days) { return Core.streak(days); } // 続けて遊んだ日数（共通部品 game-core。壊れた記録・constructor などの名前を日に数えない）
+// part:playedDays:begin（shared-workflows の template/parts/index/playedDays.js の写し。ここでは直さない。node scripts/sync-template.mjs で写す）
 const playedDays = (s) => new Set([...Object.keys(s.days), ...Object.keys(s.adays)]).size;
+// part:playedDays:end
 const solvedAll = (s) => Object.values(s.dex).reduce((a, b) => a + (+b || 0), 0);
 // 取りこぼした日：今日より前の7日のうち、今日の5問もあとからも遊んでいない日（新しい順。第1回より前は無い）
 const LATE = 7;
+// part:lateDays:begin（shared-workflows の template/parts/index/lateDays.js の写し。ここでは直さない。node scripts/sync-template.mjs で写す）
 function lateDays(s, k = todayKey()) { const out = []; let d = k; for (let i = 0; i < LATE; i++) { d = prevDay(d); if (d < EPOCH) break; if (!s.days[d] && !s.adays[d]) out.push(d); } return out; }
+// part:lateDays:end
 
 // ---- 実績：いまの記録から毎回数える（新しく残すのは結果で知らせ終えた印 ach だけ）。[id, 名前, 条件, 種類, 数え方, 目標] ----
 function tally(s) {
@@ -1576,13 +1580,17 @@ const ACH = [
 ];
 const AGRP = ["腕前", "集める", "続ける"];
 const AUNIT = { clean: "日", hard: "日", days: "日", played: "日", late: "日", kinds: "種類", solved: "問", ebest: "問" };
+// part:achGot:begin（shared-workflows の template/parts/index/achGot.js の写し。ここでは直さない。node scripts/sync-template.mjs で写す）
 const achGot = (s) => { const t = tally(s); return ACH.filter((a) => t[a[4]] >= a[5]).map((a) => a[0]); };
+// part:achGot:end
 // あと少しの実績：まだの実績のうち、いちばん目標に近いもの1つ（ゴールに近いほど人はがんばる。Kivetz ほか 2006）
+// part:nextAch:begin（shared-workflows の template/parts/index/nextAch.js の写し。ここでは直さない。node scripts/sync-template.mjs で写す）
 function nextAch(s) {
   const t = tally(s); let best = null;
   for (const a of ACH) { const n = t[a[4]]; if (n <= 0 || n >= a[5]) continue; const r = n / a[5], left = a[5] - n; if (!best || r > best.r || (r === best.r && left < best.left)) best = { id: a[0], name: a[1], left, unit: AUNIT[a[4]] || "", r }; }
   return best;
 }
+// part:nextAch:end
 
 function showHtml(P) {
   return P.show ? `<p class="show" data-a11y-say>${esc(P.show)}</p>` : "";
@@ -1867,6 +1875,7 @@ function book() {
   document.querySelectorAll(".book button").forEach((b) => (b.onclick = () => startRun("p", b.dataset.k)));
   bindFooter(); toTop();
 }
+// part:achView:begin（shared-workflows の template/parts/index/achView.js の写し。ここでは直さない。node scripts/sync-template.mjs で写す）
 function achView() {
   Core.screens.mark("achView"); // 「戻る」でホームへ（sync-template の migrateBack）
   const s = load(), t = tally(s), got = achGot(s);
@@ -1876,6 +1885,7 @@ function achView() {
     ${footer()}`;
   $("back").onclick = home; bindFooter(); toTop();
 }
+// part:achView:end
 // 遊んだ日のカレンダー：今日の5問の日は★（まちがいの少なさ）、あとから遊んだ日は ↺、取りこぼした過去7日は押すとあとから遊べる
 const ymOf = Core.ymOf;
 const ymAdd = Core.ymAdd;
